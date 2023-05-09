@@ -1,5 +1,5 @@
 ---
-- name: Create user deployer and project web-spring in GitLab
+- name: Create user deployer and project spring-boot in GitLab
   hosts: gitlab-test.sl.local
   become: true
 
@@ -20,12 +20,12 @@
         password: "deployer23123"
         email: "deployer@example.com"
 
-    - name: Create project web-spring
+    - name: Create project spring-boot
       community.general.gitlab_project:
         api_url: "{{ gitlab_url }}"
         api_username: "{{ gitlab_admin_user }}"
         api_password: "{{ gitlab_admin_pass }}"
-        name: "web-spring"
+        name: "spring-boot"
         state: present
 
     - name: Add a user to a GitLab Project
@@ -34,7 +34,7 @@
         api_username: "{{ gitlab_admin_user }}"
         api_password: "{{ gitlab_admin_pass }}"
         validate_certs: false
-        project: "web-spring"
+        project: "spring-boot"
         gitlab_user: "deployer"
         access_level: maintainer
         state: present

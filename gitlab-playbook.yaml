@@ -1,0 +1,40 @@
+---
+- name: Create user deployer and project web-spring in GitLab
+  hosts: gitlab-test.sl.local
+  become: true
+
+  vars:
+    gitlab_admin_pass: "4OBcmTcdvUaltHjLkHf4/6+YMr5R7+StQzuIzYOSjhw="
+    gitlab_admin_user: "root"
+    gitlab_url: "http://gitlab-test.sl.local/"
+
+  tasks:
+    - name: Create user deployer
+      community.general.gitlab_user:
+        api_url: "{{ gitlab_url }}"
+        validate_certs: false
+        api_username: "{{ gitlab_admin_user }}"
+        api_password: "{{ gitlab_admin_pass }}"
+        name: "deployer"
+        username: "deployer"
+        password: "deployer23123"
+        email: "deployer@example.com"
+
+    - name: Create project web-spring
+      community.general.gitlab_project:
+        api_url: "{{ gitlab_url }}"
+        api_username: "{{ gitlab_admin_user }}"
+        api_password: "{{ gitlab_admin_pass }}"
+        name: "web-spring"
+        state: present
+
+    - name: Add a user to a GitLab Project
+      community.general.gitlab_project_members:
+        api_url: "{{ gitlab_url }}"
+        api_username: "{{ gitlab_admin_user }}"
+        api_password: "{{ gitlab_admin_pass }}"
+        validate_certs: false
+        project: "web-spring"
+        gitlab_user: "deployer"
+        access_level: maintainer
+        state: present

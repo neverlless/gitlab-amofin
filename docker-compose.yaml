@@ -26,3 +26,5 @@ services:
     deploy:
       mode: replicated
       replicas: 2
+    volumes:
+      - /srv/gitlab-runner/config:/etc/gitlab-runner

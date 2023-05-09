@@ -14,7 +14,7 @@ services:
         external_url 'http://gitlab-test.sl.local'
     ports:
       - "80:80"
-      - "2204:22"
+      - "2204:2204"
       - "443:443"
     volumes:
       - "$GITLAB_HOME/config:/etc/gitlab"
@@ -27,5 +27,5 @@ services:
       mode: replicated
       replicas: 2
     volumes:
-      - /srv/gitlab-runner/config:/etc/gitlab-runner
+      #      - /srv/gitlab-runner/config:/etc/gitlab-runner
       - /var/run/docker.sock:/var/run/docker.sock

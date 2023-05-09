@@ -1,1 +1,28 @@
-#
+version: "3.7"
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:14.0.4-ce.0
+    container_name: gitlab
+    hostname: "gitlab-test.sl.local"
+    restart: always
+    environment:
+      GITLAB_HOST: "gitlab-test.sl.local"
+      GITLAB_SSH_PORT: "2204"
+      GITLAB_BACKUPS: "daily"
+      GITLAB_BACKUP_TIME: "01:00"
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab-test.sl.local'
+    ports:
+      - "80:80"
+      - "2204:22"
+      - "443:443"
+    volumes:
+      - "$GITLAB_HOME/config:/etc/gitlab"
+      - "$GITLAB_HOME/logs:/var/log/gitlab"
+      - "$GITLAB_HOME/data:/var/opt/gitlab"
+      - "$GITLAB_HOME/ssl:/etc/gitlab/ssl"
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    deploy:
+      mode: replicated
+      replicas: 2

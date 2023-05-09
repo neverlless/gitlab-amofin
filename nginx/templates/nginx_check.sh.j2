@@ -1,0 +1,14 @@
+#!/bin/bash
+SERVER=localhost
+PORT=80
+
+checkingport=echo "quit" | telnet $SERVER $PORT | grep "Escape character is"
+
+result="$?"
+
+if [ $result -eq 0 ]; then
+    exit 0
+else
+    ps -C keepalived --no-header | awk '{print $1}' | xargs kill
+
+fi

@@ -1,0 +1,7 @@
+---
+- name: Nginx
+  ansible.builtin.include_tasks: nginx.yml
+  tags: nginx
+- name: Keepalived
+  ansible.builtin.include_tasks: keepalived.yml
+  tags: keepalived

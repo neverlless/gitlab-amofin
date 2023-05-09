@@ -1,0 +1,91 @@
+stages:
+  - build
+  - test
+  - docker-build
+  - deploy
+
+variables:
+  IMAGE_TAG: "${CI_REGISTRY_IMAGE}/${CI_PROJECT_NAME}:v${CI_PIPELINE_ID}"
+  BUILD_NUMBER: "v${CI_PIPELINE_ID}"
+  HELM_PROJECT_NAME: "helm-helloworld"
+  GITLAB_HOST: "gitlab-test.sl.local"
+
+.ssh_key: &ssh_key
+  before_script:
+    - apt update
+    - apt install -y git apt-transport-https curl gnupg2
+    - "command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )"
+    - eval $(ssh-agent -s)
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+    - echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list
+    - apt update
+    - apt install -y kubectl
+    - kubectl config set-credentials gitlab-deployer --token=${K8S_TOKEN}
+    - kubectl config set-cluster kubernetes --server=${K8S_SERVER} --insecure-skip-tls-verify=true
+    - kubectl config set-context default --cluster=kubernetes --user=gitlab-deployer
+    - kubectl config use-context default
+Build:
+  stage: build
+  image: maven:3.8.5-openjdk-17
+  script:
+    - echo "Building"
+    - mvn clean package
+    - ls -la $CI_PROJECT_DIR/target
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/target/*.war
+
+Test:
+  stage: test
+  image: openjdk:21-jdk-bullseye
+  needs:
+    - Build
+  script:
+    - echo "Testing"
+    - ls -la
+    - ls -la $CI_PROJECT_DIR/target
+    - chmod +x apptest.sh
+    - ./apptest.sh
+
+DockerBuild:
+  stage: docker-build
+  needs:
+    - Test
+  image:
+    name: gcr.io/kaniko-project/executor:v1.9.1-debug
+    entrypoint: [""]
+  script:
+    - /kaniko/executor
+      --context .
+      --dockerfile Dockerfile
+      --destination "${IMAGE_TAG}"
+      --cache=true
+      --cache-ttl=24h
+
+DeployProd:
+  stage: deploy
+  needs:
+    - DockerBuild
+  image: ubuntu
+  environment:
+    name: prod
+    url: http://$LOAD_BALANCER_IP
+  <<: *ssh_key
+  script:
+    - git config --global user.email "deployer@example.com"
+    - git config --global user.name "Deployer"
+    - echo -e "Host ${GITLAB_HOST}\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+    - git clone git@${GITLAB_HOST}:k8s/${HELM_PROJECT_NAME}.git
+    - cd ${HELM_PROJECT_NAME}
+    - sed -i "s/image:\ \"[a-zA-Z0-9]\\+\"/image:\ \"${IMAGE_TAG}\"/g" deployment.yaml
+    - cat deployment.yaml
+    - git commit -am "[Deployer] Update Application to version $BUILD_NUMBER in ${CI_ENVIRONMENT_NAME} environment"
+    - git push --force
+    - kubectl apply -f /${HELM_PROJECT_NAME}/
+  only:
+    refs:
+      - main

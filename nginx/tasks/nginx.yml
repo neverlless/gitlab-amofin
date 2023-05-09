@@ -1,0 +1,53 @@
+---
+- name: Install os pkg deps
+  become: true
+  become_user: root
+  ansible.builtin.package:
+    name: "{{ nginx_pkgs }}"
+    state: present
+  tags: nginx
+
+- name: Copy nginx conf
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "{{ nginx_install_dir }}/nginx/conf/nginx.conf"
+    mode: "0644"
+    owner: root
+  tags: nginx
+
+- name: Mkdir {{ nginx_sites_dir }}
+  become: true
+  become_user: root
+  ansible.builtin.file:
+    path: "{{ nginx_sites_dir }}"
+    state: directory
+    mode: "0755"
+  tags: nginx
+
+- name: Copy default nginx site conf
+  ansible.builtin.template:
+    src: default.conf.j2
+    dest: "{{ nginx_sites_dir }}/default.conf"
+    mode: "0644"
+    owner: root
+  tags: nginx
+  notify: Restart nginx
+
+- name: Mkdir {{ nginx_log_dir }}
+  become: true
+  become_user: root
+  ansible.builtin.file:
+    path: "{{ nginx_log_dir }}"
+    state: directory
+    mode: "0755"
+    owner: www-data
+    group: www-data
+  tags: nginx
+
+- name: Starting service nginx
+  become_method: sudo
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true
+  tags: nginx

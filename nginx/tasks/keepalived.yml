@@ -1,0 +1,59 @@
+---
+- name: Systctl configure
+  ansible.posix.sysctl:
+    name: "net.ipv4.ip_nonlocal_bind"
+    value: "1"
+    state: present
+    reload: true
+  tags: keepalived
+
+- name: Add keepalived_script group
+  ansible.builtin.group:
+    name: keepalived_script
+    state: present
+    system: true
+  tags: keepalived
+
+- name: Add the user 'keepalived_script'
+  ansible.builtin.user:
+    name: keepalived_script
+    shell: /sbin/nologin
+    groups: keepalived_script
+    append: true
+    system: true
+  tags: keepalived
+
+- name: Add keepalived repository
+  ansible.builtin.apt_repository:
+    repo: ppa:hnakamur/keepalived
+  tags: keepalived
+
+- name: Install keepalived
+  ansible.builtin.apt:
+    name: keepalived
+    state: present
+  tags: keepalived
+
+- name: Create check script
+  ansible.builtin.template:
+    src: nginx_check.sh.j2
+    dest: "{{ nginx_keepalived_etc_dir }}/nginx_check.sh"
+    mode: a+x
+  tags: keepalived
+
+- name: Create keepalived conf
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: "{{ nginx_keepalived_etc_dir }}/keepalived.conf"
+    mode: "0644"
+    owner: root
+  tags: keepalived
+  notify: Restart keepalived
+
+- name: Starting service keepalived
+  become_method: sudo
+  ansible.builtin.systemd:
+    name: keepalived
+    state: started
+    enabled: true
+  tags: keepalived
